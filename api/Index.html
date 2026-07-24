@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FPL AI Projector</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14041B; --panel:#1F0A2E; --panel2:#2A1140; --line:#3A1B4E;
+    --text:#F2ECF7; --mut:#9E8FB0; --green:#00FF87; --pink:#FF2E7E;
+    --cyan:#04F5FF; --amber:#FFC145;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.5 Inter,system-ui,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:920px;margin:0 auto;padding:20px 14px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+  h1{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:700;letter-spacing:1px;
+    line-height:1;margin:0}
+  h1 span{color:var(--green)}
+  .sub{color:var(--mut);font-size:12px;margin-top:4px}
+  .chip{font-size:10px;font-weight:700;letter-spacing:.5px;border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;white-space:nowrap;color:var(--mut)}
+  button{font:inherit;cursor:pointer}
+  .btn{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;
+    padding:6px 12px;font-size:12px}
+  .tabs{display:flex;gap:6px;margin-top:18px;flex-wrap:wrap}
+  .tab{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;
+    padding:7px 13px;font-weight:700;font-size:13px}
+  .tab.on{background:var(--green);color:#062;border-color:var(--green)}
+  .pos{background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12px}
+  .pos.on{background:var(--panel2)}
+  main{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-top:12px;padding:10px;
+    min-height:200px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--mut);text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:1px;font-size:12px;padding:6px 8px;font-weight:500}
+  td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+  .r{text-align:right}
+  .big{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700}
+  .bar{background:var(--panel2);border-radius:3px;height:6px;width:56px;overflow:hidden;display:inline-block;
+    vertical-align:middle}
+  .bar>i{display:block;height:100%;background:var(--green)}
+  .note{font-size:11px;color:var(--cyan);margin-top:2px}
+  .card{background:var(--panel);border-radius:10px;padding:12px 14px;margin-top:14px}
+  .prog{background:var(--panel2);border-radius:4px;height:8px;overflow:hidden;margin-top:6px}
+  .prog>i{display:block;height:100%;background:var(--cyan);width:0;transition:width .2s}
+  .pitch{background:linear-gradient(180deg,#0B3D1F,#0E4A26);border-radius:12px;border:1px solid var(--line);
+    padding:18px 8px;position:relative}
+  .line{display:flex;justify-content:center;gap:8px;margin:10px 0;flex-wrap:wrap}
+  .plr{background:rgba(20,4,27,.85);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;
+    min-width:66px;text-align:center}
+  .plr.cap{border-color:var(--green)}
+  .plr b{font-size:12px}
+  .plr .p{font-family:'Barlow Condensed',sans-serif;font-size:16px;color:var(--green)}
+  .plr .m{font-size:10px;color:var(--mut)}
+  .mut{color:var(--mut)}
+  .amber{color:var(--amber)} .pinkc{color:var(--pink)} .greenc{color:var(--green)} .cyanc{color:var(--cyan)}
+  footer{font-size:11px;color:var(--mut);margin-top:14px;line-height:1.6}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>FPL <span>AI</span> PROJECTOR</h1>
+      <div class="sub" id="sub">connecting…</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="chip" id="status">CONNECTING</span>
+      <button class="btn" id="refresh">Refresh</button>
+    </div>
+  </header>
+
+  <div id="progWrap" style="margin-top:14px;display:none">
+    <div class="sub" id="progText"></div>
+    <div class="prog"><i id="progBar"></i></div>
+  </div>
+
+  <div id="preseasonNote" class="card" style="border:1px solid #FFC14555;display:none;font-size:12px;
+    color:var(--mut);line-height:1.6"></div>
+
+  <div class="card" id="aiCard" style="border:1px solid #04F5FF44;display:flex;justify-content:space-between;
+    align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="flex:1 1 240px">
+      <div style="font-weight:700;font-size:14px"><span class="cyanc">◈</span> AI judgement layer</div>
+      <div class="sub" id="aiStatus">Claude checks transfers, expected roles and fitness news.</div>
+    </div>
+    <button class="tab" id="aiBtn" style="background:var(--cyan);color:#062;border-color:var(--cyan)">Run AI check</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="tabs" id="posFilter" style="margin-top:10px"></div>
+  <main id="main"><div style="padding:40px;text-align:center" class="mut">Connecting…</div></main>
+
+  <footer>
+    Live FPL data through your own proxy on this domain. Pre-season projection = (last season's points ÷ 38)
+    × availability × fixture multiplier, summed across fixtures. Once the season starts, current form takes
+    over across 6 gameweeks. The AI layer only tilts numbers, never overwrites them.
+  </footer>
+</div>
+
+<script>
+const CFG = { formW:.6, ppgW:.4, fdrSwing:.09, horizon:5, blendGWs:6, fetchN:300, conc:10 };
+const POS = {1:"GK",2:"DEF",3:"MID",4:"FWD"};
+const QUOTA = {1:2,2:5,3:5,4:3};
+const BUDGET = 100;
+const PC = {1:"var(--amber)",2:"var(--cyan)",3:"var(--green)",4:"var(--pink)"};
+
+const api = (path, bust) => `/api/fpl?path=${encodeURIComponent(path)}` + (bust ? `&_cb=${Date.now()}` : "");
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const numf = x => { const v = parseFloat(x); return isFinite(v) ? v : 0; };
+
+let STATE = { boot:null, fixtures:null, hist:null, model:null, opt:null, ai:null,
+              tab:"val", pos:0, phase:"boot" };
+
+/* ---------- fetch with timeout so nothing hangs silently ---------- */
+async function getJSON(url, ms = 20000) {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: c.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+/* ---------- pick which players to pull history for ---------- */
+function selectIds(elements, limit) {
+  const byPos = {1:[],2:[],3:[],4:[]};
+  elements.forEach(p => byPos[p.element_type] && byPos[p.element_type].push(p));
+  const share = {1:.12,2:.30,3:.33,4:.25};
+  const picked = new Set();
+  [1,2,3,4].forEach(pos => {
+    const arr = byPos[pos].slice().sort((a,b) => b.now_cost - a.now_cost);
+    const n = Math.round(limit*share[pos]), topN = Math.ceil(n*.7);
+    arr.slice(0,topN).forEach(p => picked.add(p.id));
+    arr.slice(-Math.max(0,n-topN)).forEach(p => picked.add(p.id));
+  });
+  return [...picked];
+}
+
+async function fetchHistories(ids, onProg) {
+  const out = {}; const queue = ids.slice(); let done = 0;
+  async function worker(){
+    while (queue.length) {
+      const id = queue.shift();
+      try {
+        const j = await getJSON(api(`element-summary/${id}/`), 15000);
+        const past = Array.isArray(j.history_past) ? j.history_past : [];
+        out[id] = past.length ? past[past.length-1] : null;   // null = no PL history
+      } catch (e) { /* undefined = failed */ }
+      done++; if (done % 5 === 0) onProg(done);
+    }
+  }
+  await Promise.all(Array.from({length:CFG.conc}, worker));
+  onProg(done);
+  return out;
+}
+
+/* ---------- engine ---------- */
+const availOf = p => p.chance_of_playing_next_round != null
+  ? p.chance_of_playing_next_round/100
+  : ({a:1,d:.5,i:0,s:0,u:0,n:0}[p.status] ?? 1);
+const fdrMult = d => Math.max(.4, 1 + (3-d)*CFG.fdrSwing);
+
+function build(boot, fixtures, hist, ai) {
+  const teams = {}; boot.teams.forEach(t => teams[t.id] = t.short_name);
+  const gwsPlayed = boot.events.filter(e => e.finished).length;
+  const nextEv = boot.events.find(e => e.is_next) || boot.events.find(e => !e.finished) || boot.events[boot.events.length-1];
+  const ngw = nextEv ? nextEv.id : 1;
+  const deadline = nextEv && nextEv.deadline_time ? new Date(nextEv.deadline_time) : null;
+  const w = Math.min(1, gwsPlayed / CFG.blendGWs);
+
+  const upcoming = fixtures.filter(f => f.event && !f.finished && f.event >= ngw && f.event < ngw + CFG.horizon);
+  const byTeam = {};
+  upcoming.forEach(f => {
+    (byTeam[f.team_h] = byTeam[f.team_h] || []).push(f);
+    (byTeam[f.team_a] = byTeam[f.team_a] || []).push(f);
+  });
+
+  const players = boot.elements.map(p => {
+    const h = hist ? hist[p.id] : undefined;
+    const past = h || null;
+    const prior = past ? past.total_points/38 : null;
+    const current = CFG.formW*numf(p.form) + CFG.ppgW*numf(p.points_per_game);
+
+    let state = "projected";
+    if (prior == null) {
+      if (hist && Object.prototype.hasOwnProperty.call(hist, p.id)) state = "new";
+      else if (w < 1) state = "unloaded";
+    }
+    const perMatch = state === "projected" ? w*current + (1-w)*(prior||0) : null;
+
+    const adj = ai ? ai[p.id] : null;
+    let av = availOf(p);
+    if (adj && adj.avail != null) av = Math.min(av, adj.avail);
+
+    const fixs = byTeam[p.team] || [];
+    const sum = fs => fs.reduce((acc,f) => {
+      const home = f.team_h === p.team;
+      let m = fdrMult(home ? f.team_h_difficulty : f.team_a_difficulty);
+      if (adj && adj.fixtureNudge) m *= 1 + adj.fixtureNudge;
+      acc.m += m;
+      acc.lab.push((teams[home ? f.team_a : f.team_h]||"?") + (home?"(H)":"(A)"));
+      return acc;
+    }, {m:0,lab:[]});
+    const nxt = sum(fixs.filter(f => f.event === ngw)), hor = sum(fixs);
+
+    const price = p.now_cost/10;
+    const projNext = perMatch == null ? null : perMatch*av*nxt.m;
+    const projHor  = perMatch == null ? null : perMatch*av*hor.m;
+    return {
+      id:p.id, name:p.web_name, team:teams[p.team]||"?", teamId:p.team, pos:p.element_type,
+      price, state, avail:av,
+      priorPts: past ? past.total_points : null,
+      nextFix: nxt.lab.join(" ") || "BLANK",
+      projNext, projHor,
+      valNext: projNext != null && price ? projNext/price : null,
+      valHor:  projHor  != null && price ? projHor/price  : null,
+      ai: adj || null
+    };
+  });
+  return { players, ngw, deadline, gwsPlayed, blend:w };
+}
+
+function optimise(players) {
+  const pool = players.filter(p => p.state === "projected" && p.avail >= .5 && p.projHor > 0);
+  const byPos = {1:[],2:[],3:[],4:[]};
+  pool.forEach(p => byPos[p.pos].push(p));
+  [1,2,3,4].forEach(k => byPos[k].sort((a,b) => b.valHor - a.valHor));
+  if ([1,2,3,4].some(k => byPos[k].length < QUOTA[k])) return null;
+
+  const squad = [], clubs = {};
+  [1,2,3,4].forEach(pos => {
+    for (const p of byPos[pos]) {
+      if (squad.filter(s => s.pos === pos).length >= QUOTA[pos]) break;
+      const cost = squad.reduce((s,x) => s+x.price, 0);
+      if (cost + p.price <= BUDGET && (clubs[p.teamId]||0) < 3) {
+        squad.push(p); clubs[p.teamId] = (clubs[p.teamId]||0)+1;
+      }
+    }
+  });
+  if (squad.length < 15) return null;
+
+  let improved = true, guard = 0;
+  while (improved && guard++ < 50) {
+    improved = false;
+    for (let i = 0; i < squad.length; i++) {
+      const out = squad[i];
+      for (const cand of byPos[out.pos].slice(0,80)) {
+        if (squad.some(s => s.id === cand.id)) continue;
+        const cost = squad.reduce((s,x) => s+x.price, 0) - out.price + cand.price;
+        const c = {};
+        squad.forEach(s => { if (s.id !== out.id) c[s.teamId] = (c[s.teamId]||0)+1; });
+        if (cost <= BUDGET && (c[cand.teamId]||0) < 3 && cand.projHor > out.projHor + 1e-9) {
+          squad[i] = cand; improved = true; break;
+        }
+      }
+    }
+  }
+  const sq = {1:[],2:[],3:[],4:[]};
+  squad.forEach(p => sq[p.pos].push(p));
+  [1,2,3,4].forEach(k => sq[k].sort((a,b) => b.projNext - a.projNext));
+  let best = null;
+  for (let d = 3; d <= Math.min(5, sq[2].length); d++)
+    for (let m = 2; m <= Math.min(5, sq[3].length); m++) {
+      const f = 10-d-m;
+      if (f < 1 || f > 3 || f > sq[4].length) continue;
+      const xi = [sq[1][0]].concat(sq[2].slice(0,d), sq[3].slice(0,m), sq[4].slice(0,f));
+      const pts = xi.reduce((s,x) => s+x.projNext, 0);
+      if (!best || pts > best.pts) best = { xi, pts, shape:`${d}-${m}-${f}` };
+    }
+  return {
+    squad, bestXI:best,
+    cost: squad.reduce((s,x) => s+x.price, 0),
+    total: squad.reduce((s,x) => s+x.projHor, 0),
+    cap: best ? best.xi.slice().sort((a,b) => b.projNext - a.projNext)[0] : null
+  };
+}
+
+/* ---------- render ---------- */
+function rowsFor() {
+  const M = STATE.model; if (!M) return [];
+  const proj = M.players.filter(p => p.state === "projected");
+  const flag = M.players.filter(p => p.state === "new");
+  const f = r => STATE.pos ? r.filter(x => x.pos === STATE.pos) : r;
+  if (STATE.tab === "proj") return f(proj.slice().sort((a,b) => b.projNext - a.projNext)).slice(0,40);
+  if (STATE.tab === "hor")  return f(proj.slice().sort((a,b) => b.projHor - a.projHor)).slice(0,40);
+  if (STATE.tab === "val")  return f(proj.filter(p => p.avail >= .75).sort((a,b) => b.valHor - a.valHor)).slice(0,40);
+  if (STATE.tab === "flag") return f(flag.slice().sort((a,b) => b.price - a.price)).slice(0,40);
+  return [];
+}
+
+function tableHTML(rows, metric, valMetric, showPrior) {
+  const maxVal = Math.max.apply(null, rows.map(r => r[valMetric]||0).concat(.01));
+  const head = `<tr><th>Player</th><th>Pos</th><th class="r">£m</th>${showPrior?'<th class="r">Last szn</th>':''}
+    <th class="r">Proj</th><th>Value /£m</th><th>Fixtures</th></tr>`;
+  const body = rows.map(r => `
+    <tr>
+      <td><b>${esc(r.name)}</b> <span class="mut">${esc(r.team)}</span>
+        ${r.state==="new"?' <span class="chip amber" style="border-color:var(--amber)">NO PL HISTORY</span>':''}
+        ${r.ai&&r.ai.note?`<div class="note">◈ ${esc(r.ai.note)}</div>`:''}</td>
+      <td><span class="chip" style="color:${PC[r.pos]};border-color:${PC[r.pos]}">${POS[r.pos]}</span></td>
+      <td class="r mut">${r.price.toFixed(1)}</td>
+      ${showPrior?`<td class="r mut">${r.priorPts!=null?r.priorPts:"—"}</td>`:''}
+      <td class="r big">${r[metric]!=null?r[metric].toFixed(1):'<span class="mut" style="font-size:13px">—</span>'}</td>
+      <td>${r[valMetric]!=null
+          ? `<span class="bar"><i style="width:${Math.min(100,(r[valMetric]/maxVal)*100)}%"></i></span>
+             <span class="greenc" style="font-size:11px">${r[valMetric].toFixed(2)}</span>`
+          : '<span class="mut">—</span>'}</td>
+      <td style="font-size:11px" class="${r.nextFix==="BLANK"?"pinkc":"mut"}">${esc(r.nextFix)}
+        ${r.ai&&r.ai.rotationRisk?'<span class="pinkc"> ⟳</span>':''}
+        ${r.avail<1?`<span class="amber"> ${Math.round(r.avail*100)}%</span>`:''}</td>
+    </tr>`).join("");
+  return `<div class="scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+function squadHTML() {
+  const o = STATE.opt;
+  if (!o) return '<div style="padding:30px;text-align:center;font-size:13px" class="mut">Not enough projected players to build a legal squad yet.</div>';
+  const lines = [1,2,3,4].map(pos => `<div class="line">${
+    o.bestXI.xi.filter(p => p.pos===pos).map(p => `
+      <div class="plr${o.cap&&p.id===o.cap.id?' cap':''}">
+        <b>${esc(p.name)}${o.cap&&p.id===o.cap.id?' <span class="greenc">(C)</span>':''}</b>
+        <div class="p">${p.projNext.toFixed(1)}</div>
+        <div class="m">£${p.price.toFixed(1)} ${esc(p.team)}</div>
+      </div>`).join("")}</div>`).join("");
+  const bench = o.squad.filter(p => !o.bestXI.xi.some(x => x.id===p.id)).map(p =>
+    `<div style="background:var(--panel2);border-radius:8px;padding:6px 10px;font-size:12px">
+       <b>${esc(p.name)}</b> <span class="mut">${POS[p.pos]} £${p.price.toFixed(1)}</span></div>`).join("");
+  return `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 8px 12px;
+      font-family:'Barlow Condensed',sans-serif;font-size:15px;letter-spacing:.5px">
+      <span>SPEND <b class="greenc">£${o.cost.toFixed(1)}m</b> / £100m</span>
+      <span>PROJ (${CFG.horizon} GWs) <b class="greenc">${o.total.toFixed(0)} pts</b></span>
+      ${o.cap?`<span>CAPTAIN <b class="greenc">${esc(o.cap.name)}</b></span>`:''}
+    </div>
+    <div class="pitch"><div style="position:absolute;top:8px;right:12px;color:#7FCF9F;
+      font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;font-size:13px">${o.bestXI.shape}</div>${lines}</div>
+    <div class="mut" style="margin:12px 8px 6px;font-family:'Barlow Condensed',sans-serif;
+      letter-spacing:1px;text-transform:uppercase;font-size:12px">Bench</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 8px">${bench}</div>
+    <div class="mut" style="font-size:11px;padding:12px 8px 4px">
+      £100m · 2-5-5-3 · max 3 per club. Players with no Premier League history are excluded, so check the
+      "No history" tab before committing — a new signing could displace one of these picks.</div>`;
+}
+
+function render() {
+  const M = STATE.model;
+  const flagN = M ? M.players.filter(p => p.state==="new").length : 0;
+  const projN = M ? M.players.filter(p => p.state==="projected").length : 0;
+  const preseason = M ? M.gwsPlayed === 0 : true;
+
+  $("tabs").innerHTML = [["val","Value"],["squad","Best 15"],["hor",`Next ${CFG.horizon} GWs`],
+    ["proj", M?`GW${M.ngw}`:"GW"],["flag",`No history (${flagN})`]]
+    .map(([k,l]) => `<button class="tab${STATE.tab===k?" on":""}" data-tab="${k}">${l}</button>`).join("");
+  $("posFilter").style.display = STATE.tab==="squad" ? "none" : "flex";
+  $("posFilter").innerHTML = [0,1,2,3,4].map(p =>
+    `<button class="pos${STATE.pos===p?" on":""}" data-pos="${p}"
+      style="color:${p?PC[p]:"var(--text)"}">${p?POS[p]:"All"}</button>`).join("");
+
+  if (M) {
+    const days = M.deadline ? Math.ceil((M.deadline - Date.now())/864e5) : null;
+    $("sub").textContent = preseason
+      ? `Pre-season · GW${M.ngw} deadline in ${days} days · projecting from last season`
+      : `GW${M.ngw} · ${Math.round(M.blend*100)}% current form, ${Math.round((1-M.blend)*100)}% last season`;
+    $("preseasonNote").style.display = preseason && STATE.phase==="ready" ? "block" : "none";
+    $("preseasonNote").innerHTML = `<b class="amber">Pre-season mode.</b> No matches played, so form and
+      points-per-game are zero for everyone. Projections come from last season's points per gameweek,
+      adjusted for fixtures and availability. As real gameweeks arrive the model shifts onto current form
+      over ${CFG.blendGWs} weeks.`;
+  }
+  if (STATE.phase === "ready") $("status").textContent = `LIVE · ${projN} projected`;
+
+  const main = $("main");
+  if (STATE.phase !== "ready") return;
+  if (STATE.tab === "squad") { main.innerHTML = squadHTML(); return; }
+  const rows = rowsFor();
+  if (STATE.tab === "flag") {
+    main.innerHTML = `<div class="mut" style="font-size:12px;padding:4px 8px 10px;line-height:1.6">
+      These players have no Premier League history, so there is nothing honest to project from — signings from
+      abroad and players from promoted clubs. They are left unprojected and excluded from the optimiser.
+      Run the AI check for a read on their expected role.</div>` + tableHTML(rows,"projHor","valHor",false);
+    return;
+  }
+  const intro = STATE.tab === "val"
+    ? `<div class="mut" style="font-size:12px;padding:4px 8px 10px">Projected points per £m across
+       ${CFG.horizon} GWs. The bargain list — the gap between what a player produced last season and what
+       FPL has priced him at this year.</div>` : "";
+  main.innerHTML = rows.length
+    ? intro + tableHTML(rows, STATE.tab==="proj"?"projNext":"projHor",
+        STATE.tab==="proj"?"valNext":"valHor", (STATE.model||{}).gwsPlayed === 0)
+    : '<div style="padding:30px;text-align:center;font-size:13px" class="mut">Nothing matches this filter.</div>';
+}
+
+function recompute() {
+  STATE.model = build(STATE.boot, STATE.fixtures, STATE.hist, STATE.ai);
+  STATE.opt = STATE.phase === "ready" ? optimise(STATE.model.players) : null;
+  render();
+}
+
+/* ---------- load ---------- */
+async function load() {
+  STATE.phase = "boot"; STATE.hist = null; STATE.ai = null;
+  $("status").textContent = "CONNECTING";
+  $("main").innerHTML = '<div style="padding:40px;text-align:center" class="mut">Connecting…</div>';
+  $("progWrap").style.display = "none";
+  try {
+    const [boot, fixtures] = await Promise.all([
+      getJSON(api("bootstrap-static/", true), 30000),
+      getJSON(api("fixtures/", true), 30000)
+    ]);
+    if (!boot || !boot.elements || !boot.elements.length) throw new Error("empty player list");
+    STATE.boot = boot; STATE.fixtures = fixtures;
+    recompute();
+
+    const ids = selectIds(boot.elements, CFG.fetchN);
+    STATE.phase = "history";
+    $("status").textContent = `0/${ids.length}`;
+    $("progWrap").style.display = "block";
+    $("progText").textContent = `Pulling last season's output for ${ids.length} players — this is what makes the value ranking meaningful.`;
+    STATE.hist = await fetchHistories(ids, d => {
+      $("progBar").style.width = (d/ids.length*100) + "%";
+      $("status").textContent = `${d}/${ids.length}`;
+    });
+    STATE.phase = "ready";
+    $("progWrap").style.display = "none";
+    recompute();
+  } catch (e) {
+    STATE.phase = "error";
+    $("status").textContent = "ERROR";
+    $("main").innerHTML = `<div style="padding:20px">
+      <div style="font-weight:700;margin-bottom:6px">Couldn't load data</div>
+      <div class="mut" style="font-size:13px;line-height:1.6">${esc(e.message||e)}.
+      Check that <code>/api/fpl?path=bootstrap-static/</code> returns JSON in a browser tab, then Refresh.</div></div>`;
+  }
+}
+
+/* ---------- AI layer ---------- */
+async function runAI() {
+  const M = STATE.model; if (!M || STATE.phase !== "ready") return;
+  const btn = $("aiBtn"); btn.disabled = true; btn.textContent = "Checking…";
+  $("aiStatus").textContent = "Claude is reading the latest news…";
+  const proj = M.players.filter(p => p.state==="projected").sort((a,b) => b.projHor - a.projHor).slice(0,25);
+  const flag = M.players.filter(p => p.state==="new").sort((a,b) => b.price - a.price).slice(0,5);
+  const payload = proj.concat(flag).map(p => ({ id:p.id, name:p.name, team:p.team, pos:POS[p.pos] }));
+  try {
+    const r = await fetch("/api/ai", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ players: payload, preseason: M.gwsPlayed === 0 })
+    });
+    const data = await r.json();
+    if (r.status === 501) {
+      $("aiStatus").innerHTML = 'Not configured. Add <code>ANTHROPIC_API_KEY</code> in Vercel → Settings → Environment Variables, then redeploy.';
+    } else if (!r.ok) {
+      $("aiStatus").textContent = (data && data.error) || "AI check failed. Tap to retry.";
+    } else {
+      const adj = {};
+      (data.adjustments||[]).forEach(a => {
+        if (a && typeof a.id === "number") adj[a.id] = {
+          avail: a.avail != null ? Math.max(0,Math.min(1,a.avail)) : null,
+          rotationRisk: !!a.rotationRisk,
+          fixtureNudge: a.fixtureNudge != null ? Math.max(-.1,Math.min(.1,a.fixtureNudge)) : 0,
+          note: String(a.note||"").slice(0,90)
+        };
+      });
+      STATE.ai = adj;
+      const n = Object.keys(adj).length;
+      $("aiStatus").textContent = n ? `Applied ${n} adjustment${n===1?"":"s"} — see ◈ notes` : "No notable news. Projections unchanged.";
+      recompute();
+    }
+  } catch (e) {
+    $("aiStatus").textContent = "Couldn't reach the news layer. Tap to retry.";
+  }
+  btn.disabled = false; btn.textContent = "Run AI check";
+}
+
+/* ---------- events ---------- */
+$("tabs").addEventListener("click", e => {
+  const t = e.target.closest("[data-tab]"); if (!t) return;
+  STATE.tab = t.dataset.tab; render();
+});
+$("posFilter").addEventListener("click", e => {
+  const t = e.target.closest("[data-pos]"); if (!t) return;
+  STATE.pos = +t.dataset.pos; render();
+});
+$("refresh").addEventListener("click", load);
+$("aiBtn").addEventListener("click", runAI);
+load();
+</script>
+</body>
+</html>
